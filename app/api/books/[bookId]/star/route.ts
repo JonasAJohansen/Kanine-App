@@ -3,11 +3,11 @@ import { getAuth } from '@clerk/nextjs/server';
 import { prisma } from '/vercel/path0/lib/prisma';
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { bookId: string } }
 ) {
   try {
-    const { userId } = getAuth(req);
+    const { userId } = auth();
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
