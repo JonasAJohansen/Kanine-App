@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Book {
+  id           Int           @id @default(autoincrement())
+  userId       String
+  title        String
+  pages        Int
+  createdAt    DateTime      @default(now())
+  notes        Note[]
+  starredPages StarredPage[]
+}
+
+model StarredPage {
+  id     Int  @id @default(autoincrement())
+  bookId Int
+  page   Int
+  book   Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, page])
+}
+
+model Note {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  bookId     Int
+  content    String   @db.Text
+  pageNumber Int
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  tags       Tag[]
+}
+
+model Tag {
+  id     Int    @id @default(autoincrement())
+  name   String
+  userId String
+  notes  Note[]
+
+  @@unique([name, userId])
+}
