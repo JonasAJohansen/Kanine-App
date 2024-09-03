@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs';
 import { prisma } from '/vercel/path0/lib/prisma';
 
 export async function POST(
   req: Request,
-  { params }: { params: { noteId: string } }
+  { params }: { params: { bookId: string } }
 ) {
   try {
     const { userId } = auth();
@@ -12,30 +12,41 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const noteId = parseInt(params.noteId);
+    const bookId = parseInt(params.bookId);
+    const { pageNumber } = await req.json();
 
-    const note = await prisma.note.findUnique({
-      where: { id: noteId },
-      include: { book: true },
+    const book = await prisma.book.findUnique({
+      where: { id: bookId, userId },
+      include: { starredPages: true },
     });
 
-    if (!note) {
-      return new NextResponse("Note not found", { status: 404 });
+    if (!book) {
+      return new NextResponse("Book not found", { status: 404 });
     }
 
-    if (note.book.userId !== userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    const existingStarredPage = book.starredPages.find(sp => sp.page === pageNumber);
+
+    if (existingStarredPage) {
+      await prisma.starredPage.delete({
+        where: { id: existingStarredPage.id },
+      });
+    } else {
+      await prisma.starredPage.create({
+        data: {
+          bookId,
+          page: pageNumber,
+        },
+      });
     }
 
-    const updatedNote = await prisma.note.update({
-      where: { id: noteId },
-      data: { isFavorite: !note.isFavorite },
-      include: { tags: true },
+    const updatedBook = await prisma.book.findUnique({
+      where: { id: bookId },
+      include: { starredPages: true },
     });
 
-    return NextResponse.json(updatedNote);
+    return NextResponse.json(updatedBook);
   } catch (error) {
-    console.error('Error in favorite note API:', error);
+    console.error('Error in star page API:', error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
