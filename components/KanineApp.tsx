@@ -21,7 +21,9 @@ type PageFile = {
   id: number;
   bookId: number;
   pageNumber: number;
+  fileUrl: string;
   fileType: string;
+  fileName: string;
 }
 
 type Book = {
@@ -69,6 +71,7 @@ export default function KanineApp() {
   useEffect(() => {
     if (selectedBook) {
       fetchNotes(selectedBook.id, currentPage)
+      fetchBookDetails(selectedBook.id)
     }
   }, [selectedBook, currentPage])
 
@@ -85,6 +88,23 @@ export default function KanineApp() {
       console.error('Error fetching books:', error)
     }
   }
+
+  const fetchBookDetails = async (bookId: number) => {
+    try {
+      const response = await fetch(`/api/books/${bookId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedBook(data);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to fetch book details:', errorData.error);
+        // You might want to show an error message to the user here
+      }
+    } catch (error) {
+      console.error('Error fetching book details:', error);
+      // You might want to show an error message to the user here
+    }
+  };
 
   const fetchNotes = async (bookId: number, pageNumber: number) => {
     try {
@@ -586,7 +606,7 @@ export default function KanineApp() {
                         if (pageFile.fileType.startsWith('image/')) {
                           return (
                             <img 
-                              src={`/api/books/${selectedBook.id}/file/${currentPage}`}
+                              src={pageFile.fileUrl}
                               alt={`Page ${currentPage}`}
                               className="max-w-full max-h-full object-contain"
                             />
@@ -594,7 +614,7 @@ export default function KanineApp() {
                         } else {
                           return (
                             <iframe
-                              src={`/api/books/${selectedBook.id}/file/${currentPage}`}
+                              src={pageFile.fileUrl}
                               className="w-full h-full"
                               title={`Page ${currentPage}`}
                             />
