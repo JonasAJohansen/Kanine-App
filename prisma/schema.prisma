@@ -9,12 +9,28 @@ datasource db {
 
 model Book {
   id           Int           @id @default(autoincrement())
-  userId       String
   title        String
   pages        Int
+  userId       String
   createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   notes        Note[]
   starredPages StarredPage[]
+  pageFiles    PageFile[]
+}
+
+model PageFile {
+  id         Int      @id @default(autoincrement())
+  bookId     Int
+  pageNumber Int
+  fileName   String
+  fileType   String
+  fileContent Bytes
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, pageNumber])
 }
 
 model StarredPage {

@@ -183,6 +183,8 @@ export default function KanineApp() {
           body: JSON.stringify({
             content: currentNote,
             tags: currentTags,
+            bookId: selectedBook.id,
+            pageNumber: currentPage,
           }),
         })
         if (response.ok) {
@@ -192,7 +194,8 @@ export default function KanineApp() {
           setCurrentNote('')
           setCurrentTags([])
         } else {
-          console.error('Failed to update note')
+          const errorData = await response.text()
+          console.error('Failed to update note:', errorData)
         }
       } catch (error) {
         console.error('Error updating note:', error)
@@ -205,9 +208,9 @@ export default function KanineApp() {
       const response = await fetch(`/api/notes/${noteId}`, { method: 'DELETE' })
       if (response.ok) {
         setNotes(notes.filter(note => note.id !== noteId))
-        setNoteToDelete(null)
       } else {
-        console.error('Failed to delete note')
+        const errorData = await response.text()
+        console.error('Failed to delete note:', errorData)
       }
     } catch (error) {
       console.error('Error deleting note:', error)
@@ -227,17 +230,21 @@ export default function KanineApp() {
 
   const toggleFavorite = async (noteId: number) => {
     try {
-      const response = await fetch(`/api/notes/${noteId}/favorite`, { method: 'POST' })
+      const response = await fetch(`/api/notes/${noteId}/favorite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
       if (response.ok) {
-        const updatedNote = await response.json()
-        setNotes(notes.map(note => note.id === updatedNote.id ? updatedNote : note))
+        const updatedNote = await response.json();
+        setNotes(notes.map(note => note.id === updatedNote.id ? updatedNote : note));
       } else {
-        console.error('Failed to toggle favorite')
+        const errorData = await response.text();
+        console.error('Failed to toggle favorite:', errorData);
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error)
+      console.error('Error toggling favorite:', error);
     }
-  }
+  };
 
   const toggleTheme = () => {
     setIsDarkTheme(!isDarkTheme)
@@ -261,7 +268,8 @@ export default function KanineApp() {
           setSelectedBook(updatedBook);
         }
       } else {
-        console.error('Failed to toggle star page');
+        const errorData = await response.text();
+        console.error('Failed to toggle star page:', errorData);
       }
     } catch (error) {
       console.error('Error toggling star page:', error);
@@ -446,8 +454,8 @@ export default function KanineApp() {
                     <div key={note.id} className="p-3 mb-3 bg-background rounded-lg shadow-sm">
                       <p className="mb-2 text-sm whitespace-pre-wrap">{note.content}</p>
                       <div className="flex gap-1 mb-2 flex-wrap">
-                        {note.tags.map((tag) => (
-                          <span key={tag.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
+                        {note.tags.map((tag, index) => (
+                          <span key={index} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
                             {tag.name}
                           </span>
                         ))}
