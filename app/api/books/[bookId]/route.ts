@@ -51,25 +51,46 @@ export async function DELETE(
 
     // Check if the book belongs to the user
     const book = await prisma.book.findUnique({
-      where: { id: bookId },
+      where: { id: bookId, userId },
     });
 
-    if (!book || book.userId !== userId) {
+    if (!book) {
       return new NextResponse('Book not found or unauthorized', { status: 404 });
     }
 
-    // Delete associated notes and starred pages
-    await prisma.note.deleteMany({
-      where: { bookId },
-    });
+    // Use a transaction to ensure all related records are deleted
+    await prisma.$transaction(async (tx) => {
+      // Delete associated notes and their tags
+      const notes = await tx.note.findMany({
+        where: { bookId },
+        include: { tags: true },
+      });
 
-    await prisma.starredPage.deleteMany({
-      where: { bookId },
-    });
+      for (const note of notes) {
+        await tx.note.update({
+          where: { id: note.id },
+          data: { tags: { disconnect: note.tags } },
+        });
+      }
 
-    // Delete the book
-    await prisma.book.delete({
-      where: { id: bookId },
+      await tx.note.deleteMany({
+        where: { bookId },
+      });
+
+      // Delete associated starred pages
+      await tx.starredPage.deleteMany({
+        where: { bookId },
+      });
+
+      // Delete associated page files
+      await tx.pageFile.deleteMany({
+        where: { bookId },
+      });
+
+      // Delete the book
+      await tx.book.delete({
+        where: { id: bookId },
+      });
     });
 
     return new NextResponse('Book deleted successfully', { status: 200 });

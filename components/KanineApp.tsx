@@ -21,7 +21,7 @@ type PageFile = {
   id: number;
   bookId: number;
   pageNumber: number;
-  fileUrl: string;
+  fileUrl: string | null;
   fileType: string;
   fileName: string;
 }
@@ -34,10 +34,16 @@ type Book = {
   pageFiles: PageFile[];
 }
 
+type Tag = {
+  id: number;
+  name: string;
+  userId: string;
+}
+
 type Note = {
   id: number;
   content: string;
-  tags: string[];
+  tags: Tag[];
   createdAt: string;
   isFavorite: boolean;
   bookId: number;
@@ -194,7 +200,7 @@ export default function KanineApp() {
   const editNote = (note: Note) => {
     setEditingNote(note)
     setCurrentNote(note.content)
-    setCurrentTags(note.tags)
+    setCurrentTags(note.tags.map(tag => tag.name))
   }
 
   const saveEditedNote = async () => {
@@ -340,14 +346,14 @@ export default function KanineApp() {
 
   const filteredNotes = notes.filter(note => 
     note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    note.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase()))
   ).filter(note => {
     if (activeTab === 'all') return true;
     if (activeTab === 'favorites') return note.isFavorite;
-    return note.tags.includes(activeTab);
+    return note.tags.some(tag => tag.name === activeTab);
   });
 
-  const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags)));
+  const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags.map(tag => tag.name))));
 
   return (
     <div className={`min-h-screen bg-background text-foreground p-4 flex flex-col ${isDarkTheme ? 'dark' : ''}`}>
@@ -508,9 +514,9 @@ export default function KanineApp() {
                     <div key={note.id} className="p-3 mb-3 bg-background rounded-lg shadow-sm">
                       <p className="mb-2 text-sm whitespace-pre-wrap">{note.content}</p>
                       <div className="flex gap-1 mb-2 flex-wrap">
-                        {note.tags.map((tag, index) => (
-                          <span key={index} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
-                            {tag}
+                        {note.tags.map((tag) => (
+                          <span key={tag.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
+                            {tag.name}
                           </span>
                         ))}
                       </div>
@@ -606,19 +612,21 @@ export default function KanineApp() {
                         if (pageFile.fileType.startsWith('image/')) {
                           return (
                             <img 
-                              src={pageFile.fileUrl}
+                              src={pageFile.fileUrl || ''}
                               alt={`Page ${currentPage}`}
                               className="max-w-full max-h-full object-contain"
                             />
                           );
-                        } else {
+                        } else if (pageFile.fileType === 'application/pdf') {
                           return (
                             <iframe
-                              src={pageFile.fileUrl}
+                              src={pageFile.fileUrl || ''}
                               className="w-full h-full"
                               title={`Page ${currentPage}`}
                             />
                           );
+                        } else {
+                          return <p>Unsupported file type</p>;
                         }
                       } else {
                         return <p>No file uploaded for this page</p>;

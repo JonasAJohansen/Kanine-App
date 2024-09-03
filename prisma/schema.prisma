@@ -20,14 +20,14 @@ model Book {
 }
 
 model PageFile {
-  id         Int      @id @default(autoincrement())
-  bookId     Int
-  pageNumber Int
-  fileUrl    String?
-  fileType   String
-  fileName   String
+  id          Int    @id @default(autoincrement())
+  bookId      Int
+  pageNumber  Int
+  fileUrl     String?
+  fileType    String
+  fileName    String
   fileContent Bytes?
-  book       Book     @relation(fields: [bookId], references: [id])
+  book        Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@unique([bookId, pageNumber])
 }
