@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload } from 'lucide-react'
 
 type StarredPage = {
   id: number;
@@ -17,23 +17,25 @@ type StarredPage = {
   page: number;
 }
 
+type PageFile = {
+  id: number;
+  bookId: number;
+  pageNumber: number;
+  fileType: string;
+}
+
 type Book = {
   id: number;
   title: string;
   pages: number;
   starredPages: StarredPage[];
-}
-
-type Tag = {
-  id: number;
-  name: string;
-  userId: string;
+  pageFiles: PageFile[];
 }
 
 type Note = {
   id: number;
   content: string;
-  tags: Tag[];
+  tags: string[];
   createdAt: string;
   isFavorite: boolean;
   bookId: number;
@@ -57,6 +59,8 @@ export default function KanineApp() {
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const [isDarkTheme, setIsDarkTheme] = useState(false)
   const [expandedBooks, setExpandedBooks] = useState<number[]>([])
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchBooks()
@@ -121,20 +125,19 @@ export default function KanineApp() {
 
   const deleteBook = async (bookId: number) => {
     try {
-      const response = await fetch(`/api/books/${bookId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/books/${bookId}`, { method: 'DELETE' })
       if (response.ok) {
-        setBooks(books.filter(book => book.id !== bookId));
+        setBooks(books.filter(book => book.id !== bookId))
         if (selectedBook?.id === bookId) {
-          setSelectedBook(null);
+          setSelectedBook(null)
         }
       } else {
-        const errorData = await response.text();
-        console.error('Failed to delete book:', errorData);
+        console.error('Failed to delete book')
       }
     } catch (error) {
-      console.error('Error deleting book:', error);
+      console.error('Error deleting book:', error)
     }
-  };
+  }
 
   const selectBook = (book: Book) => {
     setSelectedBook(book)
@@ -171,7 +174,7 @@ export default function KanineApp() {
   const editNote = (note: Note) => {
     setEditingNote(note)
     setCurrentNote(note.content)
-    setCurrentTags(note.tags.map(tag => tag.name))
+    setCurrentTags(note.tags)
   }
 
   const saveEditedNote = async () => {
@@ -183,8 +186,6 @@ export default function KanineApp() {
           body: JSON.stringify({
             content: currentNote,
             tags: currentTags,
-            bookId: selectedBook.id,
-            pageNumber: currentPage,
           }),
         })
         if (response.ok) {
@@ -194,8 +195,7 @@ export default function KanineApp() {
           setCurrentNote('')
           setCurrentTags([])
         } else {
-          const errorData = await response.text()
-          console.error('Failed to update note:', errorData)
+          console.error('Failed to update note')
         }
       } catch (error) {
         console.error('Error updating note:', error)
@@ -208,9 +208,9 @@ export default function KanineApp() {
       const response = await fetch(`/api/notes/${noteId}`, { method: 'DELETE' })
       if (response.ok) {
         setNotes(notes.filter(note => note.id !== noteId))
+        setNoteToDelete(null)
       } else {
-        const errorData = await response.text()
-        console.error('Failed to delete note:', errorData)
+        console.error('Failed to delete note')
       }
     } catch (error) {
       console.error('Error deleting note:', error)
@@ -230,21 +230,17 @@ export default function KanineApp() {
 
   const toggleFavorite = async (noteId: number) => {
     try {
-      const response = await fetch(`/api/notes/${noteId}/favorite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await fetch(`/api/notes/${noteId}/favorite`, { method: 'POST' })
       if (response.ok) {
-        const updatedNote = await response.json();
-        setNotes(notes.map(note => note.id === updatedNote.id ? updatedNote : note));
+        const updatedNote = await response.json()
+        setNotes(notes.map(note => note.id === updatedNote.id ? updatedNote : note))
       } else {
-        const errorData = await response.text();
-        console.error('Failed to toggle favorite:', errorData);
+        console.error('Failed to toggle favorite')
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      console.error('Error toggling favorite:', error)
     }
-  };
+  }
 
   const toggleTheme = () => {
     setIsDarkTheme(!isDarkTheme)
@@ -268,8 +264,7 @@ export default function KanineApp() {
           setSelectedBook(updatedBook);
         }
       } else {
-        const errorData = await response.text();
-        console.error('Failed to toggle star page:', errorData);
+        console.error('Failed to toggle star page');
       }
     } catch (error) {
       console.error('Error toggling star page:', error);
@@ -284,16 +279,55 @@ export default function KanineApp() {
     )
   }
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && selectedBook) {
+      uploadFile(selectedBook.id, currentPage, file);
+    }
+  };
+
+  const uploadFile = async (bookId: number, pageNumber: number, file: File) => {
+    setUploadingFile(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('pageNumber', pageNumber.toString());
+
+    try {
+      const response = await fetch(`/api/books/${bookId}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const updatedBook = await response.json();
+        setBooks(books.map(book => book.id === updatedBook.id ? updatedBook : book));
+        if (selectedBook?.id === updatedBook.id) {
+          setSelectedBook(updatedBook);
+        }
+      } else {
+        console.error('Failed to upload file');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const filteredNotes = notes.filter(note => 
     note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    note.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
   ).filter(note => {
     if (activeTab === 'all') return true;
     if (activeTab === 'favorites') return note.isFavorite;
-    return note.tags.some(tag => tag.name === activeTab);
+    return note.tags.includes(activeTab);
   });
 
-  const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags.map(tag => tag.name))));
+  const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags)));
 
   return (
     <div className={`min-h-screen bg-background text-foreground p-4 flex flex-col ${isDarkTheme ? 'dark' : ''}`}>
@@ -456,7 +490,7 @@ export default function KanineApp() {
                       <div className="flex gap-1 mb-2 flex-wrap">
                         {note.tags.map((tag, index) => (
                           <span key={index} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
-                            {tag.name}
+                            {tag}
                           </span>
                         ))}
                       </div>
@@ -517,16 +551,62 @@ export default function KanineApp() {
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
-                  <Button
-                    onClick={() => toggleStarPage(selectedBook.id, currentPage)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Star className={`w-4 h-4 ${isPageStarred(selectedBook, currentPage) ? 'text-yellow-400 fill-yellow-400' : ''}`} />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => toggleStarPage(selectedBook.id, currentPage)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Star className={`w-4 h-4 ${isPageStarred(selectedBook, currentPage) ? 'text-yellow-400 fill-yellow-400' : ''}`} />
+                    </Button>
+                    <Button
+                      onClick={handleUploadClick}
+                      size="sm"
+                      variant="outline"
+                      disabled={uploadingFile}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploadingFile ? 'Uploading...' : 'Upload'}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept="image/*,application/pdf"
+                      onChange={handleFileChange}
+                      disabled={uploadingFile}
+                    />
+                  </div>
                 </div>
                 <div className="bg-muted flex-grow rounded-lg flex items-center justify-center">
-                  <p>PDF/Image Viewer (Placeholder)</p>
+                  {selectedBook.pageFiles && selectedBook.pageFiles.length > 0 ? (
+                    (() => {
+                      const pageFile = selectedBook.pageFiles.find(pf => pf.pageNumber === currentPage);
+                      if (pageFile) {
+                        if (pageFile.fileType.startsWith('image/')) {
+                          return (
+                            <img 
+                              src={`/api/books/${selectedBook.id}/file/${currentPage}`}
+                              alt={`Page ${currentPage}`}
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          );
+                        } else {
+                          return (
+                            <iframe
+                              src={`/api/books/${selectedBook.id}/file/${currentPage}`}
+                              className="w-full h-full"
+                              title={`Page ${currentPage}`}
+                            />
+                          );
+                        }
+                      } else {
+                        return <p>No file uploaded for this page</p>;
+                      }
+                    })()
+                  ) : (
+                    <p>No files uploaded for this book</p>
+                  )}
                 </div>
               </div>
             </>

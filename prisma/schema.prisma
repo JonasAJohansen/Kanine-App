@@ -23,12 +23,11 @@ model PageFile {
   id         Int      @id @default(autoincrement())
   bookId     Int
   pageNumber Int
-  fileName   String
+  fileUrl    String?
   fileType   String
-  fileContent Bytes
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  fileName   String
+  fileContent Bytes?
+  book       Book     @relation(fields: [bookId], references: [id])
 
   @@unique([bookId, pageNumber])
 }
