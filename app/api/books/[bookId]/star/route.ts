@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: { bookId: string } }
 ) {
   try {
-    const { userId } = auth();
+    const { userId } = getAuth();
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
