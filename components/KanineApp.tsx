@@ -69,15 +69,29 @@ export default function KanineApp() {
   const [expandedBooks, setExpandedBooks] = useState<number[]>([])
   const [uploadingFile, setUploadingFile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedBookId, setSelectedBookId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchBooks()
   }, [])
 
   useEffect(() => {
+    if (selectedBookId) {
+      const book = books.find(b => b.id === selectedBookId)
+      if (book) {
+        setSelectedBook(book)
+        setCurrentPage(1)
+        fetchNotes(book.id, 1)
+        if (!book.pageFiles || book.pageFiles.length === 0) {
+          fetchBookDetails(book.id)
+        }
+      }
+    }
+  }, [selectedBookId, books])
+
+  useEffect(() => {
     if (selectedBook) {
       fetchNotes(selectedBook.id, currentPage)
-      fetchBookDetails(selectedBook.id)
     }
   }, [selectedBook, currentPage])
 
@@ -100,15 +114,17 @@ export default function KanineApp() {
       const response = await fetch(`/api/books/${bookId}`);
       if (response.ok) {
         const data = await response.json();
-        setSelectedBook(data);
+        setSelectedBook(prevBook => ({
+          ...prevBook,
+          ...data,
+          pageFiles: data.pageFiles || []
+        }));
       } else {
         const errorData = await response.json();
         console.error('Failed to fetch book details:', errorData.error);
-        // You might want to show an error message to the user here
       }
     } catch (error) {
       console.error('Error fetching book details:', error);
-      // You might want to show an error message to the user here
     }
   };
 
@@ -166,8 +182,7 @@ export default function KanineApp() {
   }
 
   const selectBook = (book: Book) => {
-    setSelectedBook(book)
-    setCurrentPage(1)
+    setSelectedBookId(book.id)
   }
 
   const addNote = async () => {
