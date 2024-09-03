@@ -24,10 +24,16 @@ type Book = {
   starredPages: StarredPage[];
 }
 
+type Tag = {
+  id: number;
+  name: string;
+  userId: string;
+}
+
 type Note = {
   id: number;
   content: string;
-  tags: string[];
+  tags: Tag[];
   createdAt: string;
   isFavorite: boolean;
   bookId: number;
@@ -64,18 +70,17 @@ export default function KanineApp() {
 
   const fetchBooks = async () => {
     try {
-      const response = await fetch('/api/books');
+      const response = await fetch('/api/books')
       if (response.ok) {
-        const data = await response.json();
-        setBooks(data);
+        const data = await response.json()
+        setBooks(data)
       } else {
-        const errorText = await response.text();
-        console.error('Failed to fetch books:', response.status, errorText);
+        console.error('Failed to fetch books')
       }
     } catch (error) {
-      console.error('Error fetching books:', error);
+      console.error('Error fetching books:', error)
     }
-  };
+  }
 
   const fetchNotes = async (bookId: number, pageNumber: number) => {
     try {
@@ -116,19 +121,20 @@ export default function KanineApp() {
 
   const deleteBook = async (bookId: number) => {
     try {
-      const response = await fetch(`/api/books/${bookId}`, { method: 'DELETE' })
+      const response = await fetch(`/api/books/${bookId}`, { method: 'DELETE' });
       if (response.ok) {
-        setBooks(books.filter(book => book.id !== bookId))
+        setBooks(books.filter(book => book.id !== bookId));
         if (selectedBook?.id === bookId) {
-          setSelectedBook(null)
+          setSelectedBook(null);
         }
       } else {
-        console.error('Failed to delete book')
+        const errorData = await response.text();
+        console.error('Failed to delete book:', errorData);
       }
     } catch (error) {
-      console.error('Error deleting book:', error)
+      console.error('Error deleting book:', error);
     }
-  }
+  };
 
   const selectBook = (book: Book) => {
     setSelectedBook(book)
@@ -165,7 +171,7 @@ export default function KanineApp() {
   const editNote = (note: Note) => {
     setEditingNote(note)
     setCurrentNote(note.content)
-    setCurrentTags(note.tags)
+    setCurrentTags(note.tags.map(tag => tag.name))
   }
 
   const saveEditedNote = async () => {
@@ -272,14 +278,14 @@ export default function KanineApp() {
 
   const filteredNotes = notes.filter(note => 
     note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    note.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase()))
   ).filter(note => {
     if (activeTab === 'all') return true;
     if (activeTab === 'favorites') return note.isFavorite;
-    return note.tags.includes(activeTab);
+    return note.tags.some(tag => tag.name === activeTab);
   });
 
-  const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags)));
+  const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags.map(tag => tag.name))));
 
   return (
     <div className={`min-h-screen bg-background text-foreground p-4 flex flex-col ${isDarkTheme ? 'dark' : ''}`}>
@@ -440,9 +446,9 @@ export default function KanineApp() {
                     <div key={note.id} className="p-3 mb-3 bg-background rounded-lg shadow-sm">
                       <p className="mb-2 text-sm whitespace-pre-wrap">{note.content}</p>
                       <div className="flex gap-1 mb-2 flex-wrap">
-                        {note.tags.map((tag, index) => (
-                          <span key={index} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
-                            {tag}
+                        {note.tags.map((tag) => (
+                          <span key={tag.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
+                            {tag.name}
                           </span>
                         ))}
                       </div>
