@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload, Edit, Loader2 } from 'lucide-react'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
+import { Card } from "@/components/ui/card"
 
 type StarredPage = {
   id: number;
@@ -75,6 +76,7 @@ export default function KanineApp() {
   const [selectedBookId, setSelectedBookId] = useState<number | null>(null)
   const [globalSearchResults, setGlobalSearchResults] = useState<Note[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [showAllBooks, setShowAllBooks] = useState(false)
 
   useEffect(() => {
     fetchBooks()
@@ -91,6 +93,7 @@ export default function KanineApp() {
         if (!book.pageFiles || book.pageFiles.length === 0) {
           fetchBookDetails(book.id)
         }
+        setShowAllBooks(false)
       }
     }
   }, [selectedBookId, books])
@@ -189,6 +192,7 @@ export default function KanineApp() {
 
   const selectBook = (book: Book) => {
     setSelectedBookId(book.id)
+    setShowAllBooks(false)
   }
 
   const addNote = async () => {
@@ -441,6 +445,34 @@ export default function KanineApp() {
 
   const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags.map(tag => tag.name))));
 
+  const AllBooksView = () => (
+    <div className="bg-card rounded-lg p-4 flex flex-col h-full">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold">All Books</h2>
+        <Button variant="outline" onClick={() => setShowAllBooks(false)}>
+          Back
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {books.map((book) => (
+          <Card key={book.id} className="p-4">
+            <h3 className="text-lg font-semibold mb-2">{book.title}</h3>
+            <p className="text-sm text-muted-foreground mb-2">Pages: {book.pages}</p>
+            <p className="text-sm text-muted-foreground mb-2">
+              Notes: {book.starredPages.length}
+            </p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Starred Pages: {book.starredPages.length}
+            </p>
+            <Button onClick={() => selectBook(book)}>
+              Open Book
+            </Button>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+
   return (
     <div className={`min-h-screen bg-background text-foreground p-4 flex flex-col ${isDarkTheme ? 'dark' : ''}`}>
       <header className="mb-6 flex items-center justify-between">
@@ -477,8 +509,14 @@ export default function KanineApp() {
         </div>
       </header>
       <div className="flex-grow flex gap-4">
-        <aside className="w-64 bg-card rounded-lg p-4 flex flex-col relative">
-          <h2 className="text-lg font-semibold mb-4">Books</h2>
+        <aside className="w-64 bg-card rounded-lg p-4 flex flex-col relative shadow-md">
+          <h2 
+            className="text-lg font-semibold mb-4 cursor-pointer hover:text-primary transition-colors flex items-center justify-between"
+            onClick={() => setShowAllBooks(true)}
+          >
+            <span>Books</span>
+            <ChevronRight className="w-4 h-4" />
+          </h2>
           <ScrollArea className="flex-grow">
             {books.map((book) => (
               <div key={book.id} className="mb-2">
@@ -562,7 +600,9 @@ export default function KanineApp() {
           </ScrollArea>
         </aside>
 
-        {selectedBook ? (
+        {showAllBooks ? (
+          <AllBooksView />
+        ) : selectedBook ? (
           <ResizablePanelGroup direction="horizontal" className="flex-grow">
             <ResizablePanel defaultSize={33} minSize={20}>
               <div className="bg-card rounded-lg p-4 flex flex-col h-full">
