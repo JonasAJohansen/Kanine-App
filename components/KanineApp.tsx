@@ -55,6 +55,7 @@ export default function Component() {
   const [books, setBooks] = useState<Book[]>([])
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageInput, setPageInput] = useState('')
   const [newBookTitle, setNewBookTitle] = useState('')
   const [newBookPages, setNewBookPages] = useState('')
   const [notes, setNotes] = useState<Note[]>([])
@@ -82,6 +83,7 @@ export default function Component() {
       if (book) {
         setSelectedBook(book)
         setCurrentPage(1)
+        setPageInput('1')
         fetchNotes(book.id, 1)
         if (!book.pageFiles || book.pageFiles.length === 0) {
           fetchBookDetails(book.id)
@@ -360,6 +362,27 @@ export default function Component() {
     }
   };
 
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPageInput(e.target.value);
+  };
+
+  const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handlePageChange();
+    }
+  };
+
+  const handlePageChange = () => {
+    if (selectedBook) {
+      const newPage = parseInt(pageInput);
+      if (!isNaN(newPage) && newPage >= 1 && newPage <= selectedBook.pages) {
+        setCurrentPage(newPage);
+      } else {
+        setPageInput(currentPage.toString());
+      }
+    }
+  };
+
   const filteredNotes = notes.filter(note => 
     note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
     note.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -477,6 +500,7 @@ export default function Component() {
                         onClick={() => {
                           selectBook(book)
                           setCurrentPage(starredPage.page)
+                          setPageInput(starredPage.page.toString())
                         }}
                       >
                         <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
@@ -600,16 +624,34 @@ export default function Component() {
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
                     <Button 
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      onClick={() => {
+                        const newPage = Math.max(1, currentPage - 1);
+                        setCurrentPage(newPage);
+                        setPageInput(newPage.toString());
+                      }}
                       disabled={currentPage === 1}
                       size="sm"
                       variant="outline"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-sm font-medium">Page {currentPage} of {selectedBook.pages}</span>
+                    <div className="flex items-center">
+                      <Input
+                        type="text"
+                        value={pageInput}
+                        onChange={handlePageInputChange}
+                        onKeyDown={handlePageInputKeyDown}
+                        onBlur={handlePageChange}
+                        className="w-16 text-center"
+                      />
+                      <span className="ml-2">of {selectedBook.pages}</span>
+                    </div>
                     <Button 
-                      onClick={() => setCurrentPage(Math.min(selectedBook.pages, currentPage + 1))}
+                      onClick={() => {
+                        const newPage = Math.min(selectedBook.pages, currentPage + 1);
+                        setCurrentPage(newPage);
+                        setPageInput(newPage.toString());
+                      }}
                       disabled={currentPage === selectedBook.pages}
                       size="sm"
                       variant="outline"
