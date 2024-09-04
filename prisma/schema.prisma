@@ -56,7 +56,6 @@ model StarredPage {
   bookId    Int
   page      Int
   book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
 
   @@unique([bookId, page])
   @@index([bookId])
