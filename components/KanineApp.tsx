@@ -85,13 +85,19 @@ export default function Component() {
         setSelectedBook(book)
         setCurrentPage(1)
         setPageInput('1')
-        fetchNotes(book.id)
+        fetchNotes(book.id, 1)
         if (!book.pageFiles || book.pageFiles.length === 0) {
           fetchBookDetails(book.id)
         }
       }
     }
   }, [selectedBookId, books])
+
+  useEffect(() => {
+    if (selectedBook) {
+      fetchNotes(selectedBook.id, currentPage)
+    }
+  }, [selectedBook, currentPage])
 
   const fetchBooks = async () => {
     try {
@@ -126,9 +132,9 @@ export default function Component() {
     }
   };
 
-  const fetchNotes = async (bookId: number) => {
+  const fetchNotes = async (bookId: number, pageNumber: number) => {
     try {
-      const response = await fetch(`/api/notes?bookId=${bookId}`)
+      const response = await fetch(`/api/notes?bookId=${bookId}&pageNumber=${pageNumber}`)
       if (response.ok) {
         const data = await response.json()
         setNotes(data)
@@ -378,22 +384,16 @@ export default function Component() {
     }
   };
 
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = searchTerm === '' || 
-      note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      note.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesTab = activeTab === 'all' || 
-      (activeTab === 'favorites' && note.isFavorite) ||
-      note.tags.some(tag => tag.name === activeTab);
-    
-    // Remove the page matching condition when searching
-    const matchesPage = searchTerm === '' ? note.pageNumber === currentPage : true;
-    
-    return matchesSearch && matchesTab && matchesPage;
+  const filteredNotes = notes.filter(note => 
+    note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    note.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  ).filter(note => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'favorites') return note.isFavorite;
+    return note.tags.some(tag => tag.name === activeTab);
   });
 
-  const uniqueTags = Array.from(new Set(notes.flatMap(note => note.tags.map(tag => tag.name))));
+  const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags.map(tag => tag.name))));
 
   return (
     <div className={`min-h-screen bg-background text-foreground p-4 flex flex-col ${isDarkTheme ? 'dark' : ''}`}>
@@ -587,7 +587,6 @@ export default function Component() {
                       </div>
                       <div className="flex justify-between items-center text-xs text-muted-foreground">
                         <span><Clock className="w-3 h-3 inline mr-1" />{new Date(note.createdAt).toLocaleString()}</span>
-                        <span>Page {note.pageNumber}</span>
                         <div>
                           <Button onClick={() => editNote(note)} size="sm" variant="ghost" className="h-6 w-6 p-0">
                             <Tag className="w-4 h-4" />
