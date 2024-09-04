@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload } from 'lucide-react'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 
 type StarredPage = {
   id: number;
@@ -518,10 +519,10 @@ export default function Component() {
           </Button>
         </aside>
 
-        <main className="flex-grow flex gap-4">
-          {selectedBook ? (
-            <>
-              <div className="w-1/3 bg-card rounded-lg p-4 flex flex-col">
+        {selectedBook ? (
+          <ResizablePanelGroup direction="horizontal" className="flex-grow">
+            <ResizablePanel defaultSize={33} minSize={20}>
+              <div className="bg-card rounded-lg p-4 flex flex-col h-full">
                 <h2 className="text-xl font-semibold mb-3">Notes</h2>
                 <div className="space-y-3 mb-3">
                   <Textarea 
@@ -575,7 +576,7 @@ export default function Component() {
                 </Tabs>
                 <ScrollArea className="flex-grow">
                   {filteredNotes.map((note) => (
-                    <div key={note.id} className="p-3 mb-3 bg-background rounded-lg shadow-sm">
+                    <div key={note.id} className="p-3 mb-3 rounded-lg shadow-sm bg-card">
                       <p className="mb-2 text-sm whitespace-pre-wrap">{note.content}</p>
                       <div className="flex gap-1 mb-2 flex-wrap">
                         {note.tags.map((tag) => (
@@ -618,8 +619,12 @@ export default function Component() {
                   ))}
                 </ScrollArea>
               </div>
-
-              <div className="flex-1 bg-card rounded-lg p-4 flex flex-col">
+            </ResizablePanel>
+            
+            <ResizableHandle withHandle />
+            
+            <ResizablePanel defaultSize={67} minSize={30}>
+              <div className="bg-card rounded-lg p-4 flex flex-col h-full">
                 <h2 className="text-xl font-semibold mb-3">Reader</h2>
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
@@ -686,7 +691,7 @@ export default function Component() {
                     />
                   </div>
                 </div>
-                <div className="bg-muted flex-grow rounded-lg flex items-center justify-center">
+                <div className="bg-muted flex-grow rounded-lg flex items-center justify-center overflow-hidden">
                   {selectedBook.pageFiles && selectedBook.pageFiles.length > 0 ? (
                     (() => {
                       const pageFile = selectedBook.pageFiles.find(pf => pf.pageNumber === currentPage);
@@ -719,13 +724,13 @@ export default function Component() {
                   )}
                 </div>
               </div>
-            </>
-          ) : (
-            <div className="flex-grow flex items-center justify-center">
-              <p>Select a book to start taking notes</p>
-            </div>
-          )}
-        </main>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <div className="flex-grow flex items-center justify-center bg-card rounded-lg">
+            <p className="text-xl text-muted-foreground">Select a book to start taking notes</p>
+          </div>
+        )}
       </div>
     </div>
   )
