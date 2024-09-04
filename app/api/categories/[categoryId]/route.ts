@@ -15,12 +15,11 @@ export async function GET(
     const category = await prisma.category.findUnique({
       where: { 
         id: parseInt(params.categoryId),
-        userId,
       },
       include: { books: true },
     });
 
-    if (!category) {
+    if (!category || category.userId !== userId) {
       return new NextResponse('Category not found', { status: 404 });
     }
 
@@ -46,7 +45,7 @@ export async function PUT(
       return new NextResponse('Category name is required', { status: 400 });
     }
 
-    const updatedCategory = await prisma.category.update({
+    const updatedCategory = await prisma.category.updateMany({
       where: { 
         id: parseInt(params.categoryId),
         userId,
@@ -54,7 +53,11 @@ export async function PUT(
       data: { name },
     });
 
-    return NextResponse.json(updatedCategory);
+    if (updatedCategory.count === 0) {
+      return new NextResponse('Category not found or unauthorized', { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Category updated successfully' });
   } catch (error) {
     console.error('Error updating category:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
@@ -71,12 +74,16 @@ export async function DELETE(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    await prisma.category.delete({
+    const deletedCategory = await prisma.category.deleteMany({
       where: { 
         id: parseInt(params.categoryId),
         userId,
       },
     });
+
+    if (deletedCategory.count === 0) {
+      return new NextResponse('Category not found or unauthorized', { status: 404 });
+    }
 
     return new NextResponse('Category deleted successfully', { status: 200 });
   } catch (error) {
