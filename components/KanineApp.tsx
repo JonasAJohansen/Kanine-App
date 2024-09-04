@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload } from 'lucide-react'
 
 type StarredPage = {
@@ -50,7 +51,7 @@ type Note = {
   pageNumber: number;
 }
 
-export default function KanineApp() {
+export default function Component() {
   const [books, setBooks] = useState<Book[]>([])
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -406,42 +407,66 @@ export default function KanineApp() {
         </div>
       </header>
       <div className="flex-grow flex gap-4">
-        <aside className="w-48 bg-card rounded-lg p-4 flex flex-col gap-4">
+        <aside className="w-64 bg-card rounded-lg p-4 flex flex-col gap-4">
           <h2 className="text-lg font-semibold">Books</h2>
           <ScrollArea className="flex-grow">
             {books.map((book) => (
               <div key={book.id} className="mb-2">
                 <div 
-                  className={`flex items-center justify-between cursor-pointer p-2 rounded hover:bg-accent ${selectedBook?.id === book.id ? 'bg-accent' : ''}`}
+                  className={`grid grid-cols-[1fr,auto,auto] items-center gap-2 cursor-pointer p-2 rounded hover:bg-accent ${selectedBook?.id === book.id ? 'bg-accent' : ''}`}
                 >
-                  <div className="flex items-center gap-2 flex-grow" onClick={() => selectBook(book)}>
-                    <Book className="w-4 h-4" />
-                    <span className="text-sm truncate">{book.title}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => toggleExpandBook(book.id)}>
-                      {expandedBooks.includes(book.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the book and all its notes.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteBook(book.id)}>Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 overflow-hidden" onClick={() => selectBook(book)}>
+                          <Book className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm truncate">{book.title}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{book.title}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpandBook(book.id);
+                    }}
+                  >
+                    {expandedBooks.includes(book.id) ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the book and all its notes.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteBook(book.id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
                 {expandedBooks.includes(book.id) && book.starredPages.length > 0 && (
                   <div className="ml-4 mt-1">
