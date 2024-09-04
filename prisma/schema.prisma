@@ -12,9 +12,11 @@ model Category {
   name      String
   userId    String
   books     Book[]
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([name, userId])
+  @@index([userId])
 }
 
 model Book {
@@ -35,14 +37,14 @@ model Book {
 }
 
 model PageFile {
-  id          Int     @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   bookId      Int
   pageNumber  Int
   fileUrl     String?
   fileType    String
   fileName    String
   fileContent Bytes?
-  book        Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -55,6 +57,8 @@ model StarredPage {
   bookId    Int
   page      Int
   book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([bookId, page])
   @@index([bookId])
