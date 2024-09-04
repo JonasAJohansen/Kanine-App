@@ -12,7 +12,6 @@ model Category {
   name      String
   userId    String
   books     Book[]
-  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([name, userId])
