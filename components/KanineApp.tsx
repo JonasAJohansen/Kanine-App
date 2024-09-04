@@ -52,7 +52,7 @@ type Note = {
   pageNumber: number;
 }
 
-export default function Component() {
+export default function KanineApp() {
   const [books, setBooks] = useState<Book[]>([])
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -477,18 +477,19 @@ export default function Component() {
         </div>
       </header>
       <div className="flex-grow flex gap-4">
-        <aside className="w-64 bg-card rounded-lg p-4 flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">Books</h2>
+        <aside className="w-64 bg-card rounded-lg p-4 flex flex-col relative">
+          <h2 className="text-lg font-semibold mb-4">Books</h2>
           <ScrollArea className="flex-grow">
             {books.map((book) => (
               <div key={book.id} className="mb-2">
                 <div 
-                  className={`grid grid-cols-[1fr,auto,auto] items-center gap-2 cursor-pointer p-2 rounded hover:bg-accent ${selectedBook?.id === book.id ? 'bg-accent' : ''}`}
+                  className={`grid grid-cols-[1fr,auto,auto] items-center gap-2 cursor-pointer p-2 rounded hover:bg-accent transition-colors duration-200 ${selectedBook?.id === book.id ? 'bg-accent' : ''}`}
+                  onClick={() => selectBook(book)}
                 >
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 overflow-hidden" onClick={() => selectBook(book)}>
+                        <div className="flex items-center gap-2 overflow-hidden">
                           <Book className="w-4 h-4 flex-shrink-0" />
                           <span className="text-sm truncate">{book.title}</span>
                         </div>
@@ -559,10 +560,6 @@ export default function Component() {
               </div>
             ))}
           </ScrollArea>
-          <Button onClick={toggleTheme} variant="outline" size="sm" className="mt-auto">
-            {isDarkTheme ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-            {isDarkTheme ? 'Light' : 'Dark'}
-          </Button>
         </aside>
 
         {selectedBook ? (
@@ -626,54 +623,56 @@ export default function Component() {
                   </TabsList>
                 </Tabs>
                 <ScrollArea className="flex-grow">
-                  {(globalSearchResults.length > 0 ? globalSearchResults : filteredNotes).map((note) => (
-                    <div key={note.id} className="p-3 mb-3 rounded-lg shadow-sm bg-card">
-                      <p className="mb-2 text-sm whitespace-pre-wrap">{note.content}</p>
-                      <div className="flex gap-1 mb-2 flex-wrap">
-                        {note.tags.map((tag) => (
-                          <span key={tag.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-muted-foreground">
-                        <span><Clock className="w-3 h-3 inline mr-1" />{new Date(note.createdAt).toLocaleString()}</span>
-                        <div className="flex items-center gap-2">
-                          <Button onClick={() => editNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the note.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteNote(note.id)}>Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                          <Button onClick={() => toggleFavorite(note.id)} size="sm" variant="ghost" className="h-6 w-6 p-0">
-                            <Star className={`w-4 h-4 ${note.isFavorite ? 'text-yellow-400 fill-yellow-400' : ''}`} />
-                          </Button>
-                          {globalSearchResults.length > 0 && (
-                            <Button onClick={() => navigateToNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
-                              Go to Page {note.pageNumber}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(globalSearchResults.length > 0 ? globalSearchResults : filteredNotes).map((note) => (
+                      <div key={note.id} className="p-3 rounded-lg shadow-sm bg-card flex flex-col">
+                        <p className="mb-2 text-sm whitespace-pre-wrap flex-grow">{note.content}</p>
+                        <div className="flex gap-1 mb-2 flex-wrap">
+                          {note.tags.map((tag) => (
+                            <span key={tag.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+                          <span><Clock className="w-3 h-3 inline mr-1" />{new Date(note.createdAt).toLocaleString()}</span>
+                          <div className="flex items-center gap-2">
+                            <Button onClick={() => editNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
                             </Button>
-                          )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the note.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteNote(note.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <Button onClick={() => toggleFavorite(note.id)} size="sm" variant="ghost" className="h-6 w-6 p-0">
+                              <Star className={`w-4 h-4 ${note.isFavorite ? 'text-yellow-400 fill-yellow-400' : ''}`} />
+                            </Button>
+                            {globalSearchResults.length > 0 && (
+                              <Button onClick={() => navigateToNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
+                                Go to Page {note.pageNumber}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </ScrollArea>
               </div>
             </ResizablePanel>
@@ -789,6 +788,15 @@ export default function Component() {
           </div>
         )}
       </div>
+      <Button 
+        onClick={toggleTheme} 
+        variant="outline" 
+        size="sm" 
+        className="fixed bottom-4 left-4 z-50"
+      >
+        {isDarkTheme ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+        {isDarkTheme ? 'Light' : 'Dark'}
+      </Button>
     </div>
   )
 }
