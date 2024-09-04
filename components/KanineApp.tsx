@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload, Edit, Loader2 } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload, Edit, Loader2, FolderPlus } from 'lucide-react'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
+import { Card } from "@/components/ui/card"
 
 type StarredPage = {
   id: number;
@@ -28,12 +30,19 @@ type PageFile = {
   fileName: string;
 }
 
+type Category = {
+  id: number;
+  name: string;
+}
+
 type Book = {
   id: number;
   title: string;
   pages: number;
   starredPages: StarredPage[];
   pageFiles: PageFile[];
+  notesCount: number;
+  categoryId: number | null;
 }
 
 type Tag = {
@@ -52,13 +61,18 @@ type Note = {
   pageNumber: number;
 }
 
-export default function Component() {
+const ALL_CATEGORIES = 'all';
+
+export default function KanineApp() {
   const [books, setBooks] = useState<Book[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES)
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('')
   const [newBookTitle, setNewBookTitle] = useState('')
   const [newBookPages, setNewBookPages] = useState('')
+  const [newBookCategory, setNewBookCategory] = useState<string>(ALL_CATEGORIES)
   const [notes, setNotes] = useState<Note[]>([])
   const [currentNote, setCurrentNote] = useState('')
   const [currentTags, setCurrentTags] = useState<string[]>([])
@@ -67,6 +81,8 @@ export default function Component() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [isAddBookDialogOpen, setIsAddBookDialogOpen] = useState(false)
+  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const [isDarkTheme, setIsDarkTheme] = useState(false)
   const [expandedBooks, setExpandedBooks] = useState<number[]>([])
@@ -75,9 +91,11 @@ export default function Component() {
   const [selectedBookId, setSelectedBookId] = useState<number | null>(null)
   const [globalSearchResults, setGlobalSearchResults] = useState<Note[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [showAllBooks, setShowAllBooks] = useState(false)
 
   useEffect(() => {
     fetchBooks()
+    fetchCategories()
   }, [])
 
   useEffect(() => {
@@ -91,6 +109,7 @@ export default function Component() {
         if (!book.pageFiles || book.pageFiles.length === 0) {
           fetchBookDetails(book.id)
         }
+        setShowAllBooks(false)
       }
     }
   }, [selectedBookId, books])
@@ -115,22 +134,37 @@ export default function Component() {
     }
   }
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories')
+      if (response.ok) {
+        const data = await response.json()
+        setCategories(data)
+      } else {
+        console.error('Failed to fetch categories')
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
+
   const fetchBookDetails = async (bookId: number) => {
     try {
       const response = await fetch(`/api/books/${bookId}`);
       if (response.ok) {
         const data = await response.json();
-        setSelectedBook(prevBook => ({
-          ...prevBook,
+        return {
           ...data,
-          pageFiles: data.pageFiles || []
-        }));
+          pageFiles: data.pageFiles || [],
+          notesCount: data.notesCount || 0
+        };
       } else {
-        const errorData = await response.json();
-        console.error('Failed to fetch book details:', errorData.error);
+        console.error('Failed to fetch book details:', await response.json());
+        return null;
       }
     } catch (error) {
       console.error('Error fetching book details:', error);
+      return null;
     }
   };
 
@@ -154,19 +188,46 @@ export default function Component() {
         const response = await fetch('/api/books', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: newBookTitle, pages: parseInt(newBookPages) }),
+          body: JSON.stringify({ 
+            title: newBookTitle, 
+            pages: parseInt(newBookPages),
+            categoryId: newBookCategory === ALL_CATEGORIES ? null : parseInt(newBookCategory)
+          }),
         })
         if (response.ok) {
           const newBook = await response.json()
           setBooks([...books, newBook])
           setNewBookTitle('')
           setNewBookPages('')
+          setNewBookCategory(ALL_CATEGORIES)
           setIsAddBookDialogOpen(false)
         } else {
           console.error('Failed to add book')
         }
       } catch (error) {
         console.error('Error adding book:', error)
+      }
+    }
+  }
+
+  const addCategory = async () => {
+    if (newCategoryName) {
+      try {
+        const response = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newCategoryName }),
+        })
+        if (response.ok) {
+          const newCategory = await response.json()
+          setCategories([...categories, newCategory])
+          setNewCategoryName('')
+          setIsAddCategoryDialogOpen(false)
+        } else {
+          console.error('Failed to add category')
+        }
+      } catch (error) {
+        console.error('Error adding category:', error)
       }
     }
   }
@@ -189,6 +250,7 @@ export default function Component() {
 
   const selectBook = (book: Book) => {
     setSelectedBookId(book.id)
+    setShowAllBooks(false)
   }
 
   const addNote = async () => {
@@ -441,6 +503,71 @@ export default function Component() {
 
   const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags.map(tag => tag.name))));
 
+  const AllBooksView = () => {
+    const [detailedBooks, setDetailedBooks] = useState<Book[]>([]);
+
+    useEffect(() => {
+      const fetchAllBookDetails = async () => {
+        const bookDetailsPromises = books.map(book => fetchBookDetails(book.id));
+        const bookDetails = await Promise.all(bookDetailsPromises);
+        setDetailedBooks(bookDetails.filter(book => book !== null) as Book[]);
+      };
+
+      fetchAllBookDetails();
+    }, [books]);
+
+    const filteredBooks = selectedCategory === ALL_CATEGORIES
+      ? detailedBooks
+      : detailedBooks.filter(book => book.categoryId === parseInt(selectedCategory));
+
+    return (
+      <div className="bg-card rounded-lg p-4 flex flex-col h-full">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold">All Books</h2>
+          <Button variant="outline" onClick={() => setShowAllBooks(false)}>
+            Back
+          </Button>
+        </div>
+        <div className="mb-4">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select a category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CATEGORIES}>All Categories</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id.toString()}>{category.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredBooks.map((book) => (
+            <Card key={book.id} className="p-4">
+              <h3 className="text-lg font-semibold mb-2">{book.title}</h3>
+              <p className="text-sm text-muted-foreground mb-2">Pages: {book.pages}</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Notes: {book.notesCount}
+              </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Starred Pages: {book.starredPages.length}
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Category: {categories.find(c => c.id === book.categoryId)?.name || 'Uncategorized'}
+              </p>
+              <Button onClick={() => {
+                selectBook(book)
+                setShowAllBooks(false)
+              }}>
+                Open Book
+              </Button>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`min-h-screen bg-background text-foreground p-4 flex flex-col ${isDarkTheme ? 'dark' : ''}`}>
       <header className="mb-6 flex items-center justify-between">
@@ -469,7 +596,39 @@ export default function Component() {
                   placeholder="Number of pages"
                   type="number"
                 />
+                <Select value={newBookCategory} onValueChange={setNewBookCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_CATEGORIES}>Uncategorized</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>{category.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button onClick={addBook}>Add Book</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <FolderPlus className="w-4 h-4 mr-2" />
+                Add Category
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Category</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-4">
+                <Input 
+                  value={newCategoryName} 
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Category name"
+                />
+                <Button onClick={addCategory}>Add Category</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -477,18 +636,40 @@ export default function Component() {
         </div>
       </header>
       <div className="flex-grow flex gap-4">
-        <aside className="w-64 bg-card rounded-lg p-4 flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">Books</h2>
+        <aside className="w-64 bg-card rounded-lg p-4 flex flex-col relative shadow-md">
+          <h2 
+            className="text-lg font-semibold mb-4 cursor-pointer hover:text-primary transition-colors flex items-center justify-between"
+            onClick={() => setShowAllBooks(true)}
+          >
+            <span>Books</span>
+            <ChevronRight className="w-4 h-4" />
+          </h2>
           <ScrollArea className="flex-grow">
-            {books.map((book) => (
+            <div className="mb-4">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_CATEGORIES}>All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>{category.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {books
+              .filter(book => selectedCategory === ALL_CATEGORIES || book.categoryId === parseInt(selectedCategory))
+              .map((book) => (
               <div key={book.id} className="mb-2">
                 <div 
-                  className={`grid grid-cols-[1fr,auto,auto] items-center gap-2 cursor-pointer p-2 rounded hover:bg-accent ${selectedBook?.id === book.id ? 'bg-accent' : ''}`}
+                  className={`grid grid-cols-[1fr,auto,auto] items-center gap-2 cursor-pointer p-2 rounded hover:bg-accent transition-colors duration-200 ${selectedBook?.id === book.id ? 'bg-accent' : ''}`}
+                  onClick={() => selectBook(book)}
                 >
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 overflow-hidden" onClick={() => selectBook(book)}>
+                        <div className="flex items-center gap-2 overflow-hidden">
                           <Book className="w-4 h-4 flex-shrink-0" />
                           <span className="text-sm truncate">{book.title}</span>
                         </div>
@@ -559,13 +740,11 @@ export default function Component() {
               </div>
             ))}
           </ScrollArea>
-          <Button onClick={toggleTheme} variant="outline" size="sm" className="mt-auto">
-            {isDarkTheme ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-            {isDarkTheme ? 'Light' : 'Dark'}
-          </Button>
         </aside>
 
-        {selectedBook ? (
+        {showAllBooks ? (
+          <AllBooksView />
+        ) : selectedBook ? (
           <ResizablePanelGroup direction="horizontal" className="flex-grow">
             <ResizablePanel defaultSize={33} minSize={20}>
               <div className="bg-card rounded-lg p-4 flex flex-col h-full">
@@ -626,54 +805,56 @@ export default function Component() {
                   </TabsList>
                 </Tabs>
                 <ScrollArea className="flex-grow">
-                  {(globalSearchResults.length > 0 ? globalSearchResults : filteredNotes).map((note) => (
-                    <div key={note.id} className="p-3 mb-3 rounded-lg shadow-sm bg-card">
-                      <p className="mb-2 text-sm whitespace-pre-wrap">{note.content}</p>
-                      <div className="flex gap-1 mb-2 flex-wrap">
-                        {note.tags.map((tag) => (
-                          <span key={tag.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-muted-foreground">
-                        <span><Clock className="w-3 h-3 inline mr-1" />{new Date(note.createdAt).toLocaleString()}</span>
-                        <div className="flex items-center gap-2">
-                          <Button onClick={() => editNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the note.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteNote(note.id)}>Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                          <Button onClick={() => toggleFavorite(note.id)} size="sm" variant="ghost" className="h-6 w-6 p-0">
-                            <Star className={`w-4 h-4 ${note.isFavorite ? 'text-yellow-400 fill-yellow-400' : ''}`} />
-                          </Button>
-                          {globalSearchResults.length > 0 && (
-                            <Button onClick={() => navigateToNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
-                              Go to Page {note.pageNumber}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(globalSearchResults.length > 0 ? globalSearchResults : filteredNotes).map((note) => (
+                      <div key={note.id} className="p-3 rounded-lg shadow-sm bg-card flex flex-col">
+                        <p className="mb-2 text-sm whitespace-pre-wrap flex-grow">{note.content}</p>
+                        <div className="flex gap-1 mb-2 flex-wrap">
+                          {note.tags.map((tag) => (
+                            <span key={tag.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+                          <span><Clock className="w-3 h-3 inline mr-1" />{new Date(note.createdAt).toLocaleString()}</span>
+                          <div className="flex items-center gap-2">
+                            <Button onClick={() => editNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
                             </Button>
-                          )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the note.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteNote(note.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <Button onClick={() => toggleFavorite(note.id)} size="sm" variant="ghost" className="h-6 w-6 p-0">
+                              <Star className={`w-4 h-4 ${note.isFavorite ? 'text-yellow-400 fill-yellow-400' : ''}`} />
+                            </Button>
+                            {globalSearchResults.length > 0 && (
+                              <Button onClick={() => navigateToNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
+                                Go to Page {note.pageNumber}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </ScrollArea>
               </div>
             </ResizablePanel>
@@ -789,6 +970,15 @@ export default function Component() {
           </div>
         )}
       </div>
+      <Button 
+        onClick={toggleTheme} 
+        variant="outline" 
+        size="sm" 
+        className="fixed bottom-4 left-4 z-50"
+      >
+        {isDarkTheme ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+        {isDarkTheme ? 'Light' : 'Dark'}
+      </Button>
     </div>
   )
 }
