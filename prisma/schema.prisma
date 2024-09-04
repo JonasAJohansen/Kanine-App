@@ -45,8 +45,6 @@ model PageFile {
   fileName    String
   fileContent Bytes?
   book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
   @@unique([bookId, pageNumber])
   @@index([bookId])
@@ -57,8 +55,6 @@ model StarredPage {
   bookId    Int
   page      Int
   book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@unique([bookId, page])
   @@index([bookId])
@@ -71,8 +67,6 @@ model Note {
   content    String   @db.Text
   pageNumber Int
   isFavorite Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
   book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   tags       Tag[]
 
@@ -85,8 +79,6 @@ model Tag {
   name      String
   userId    String
   notes     Note[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@unique([name, userId])
   @@index([userId])
