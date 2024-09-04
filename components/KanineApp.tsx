@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload, Edit, Loader2 } from 'lucide-react'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 
 type StarredPage = {
@@ -73,6 +73,8 @@ export default function Component() {
   const [uploadingFile, setUploadingFile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedBookId, setSelectedBookId] = useState<number | null>(null)
+  const [globalSearchResults, setGlobalSearchResults] = useState<Note[]>([])
+  const [isSearching, setIsSearching] = useState(false)
 
   useEffect(() => {
     fetchBooks()
@@ -384,6 +386,50 @@ export default function Component() {
     }
   };
 
+  const performGlobalSearch = async () => {
+    if (selectedBook && searchTerm) {
+      setIsSearching(true)
+      try {
+        const allNotes: Note[] = [];
+        for (let page = 1; page <= selectedBook.pages; page++) {
+          const response = await fetch(`/api/notes?bookId=${selectedBook.id}&pageNumber=${page}`);
+          if (response.ok) {
+            const pageNotes: Note[] = await response.json();
+            allNotes.push(...pageNotes);
+          }
+        }
+        const results = allNotes.filter(note =>
+          note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          note.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+        setGlobalSearchResults(results);
+      } catch (error) {
+        console.error('Error performing global search:', error);
+      } finally {
+        setIsSearching(false)
+      }
+    } else {
+      setGlobalSearchResults([]);
+    }
+  };
+
+  useEffect(() => {
+    if (searchTerm) {
+      const debounceTimer = setTimeout(() => {
+        performGlobalSearch();
+      }, 300);
+      return () => clearTimeout(debounceTimer);
+    } else {
+      setGlobalSearchResults([]);
+    }
+  }, [searchTerm, selectedBook]);
+
+  const navigateToNote = (note: Note) => {
+    setCurrentPage(note.pageNumber);
+    setPageInput(note.pageNumber.toString());
+    fetchNotes(selectedBook!.id, note.pageNumber);
+  };
+
   const filteredNotes = notes.filter(note => 
     note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
     note.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -557,13 +603,18 @@ export default function Component() {
                     {editingNote ? 'Save Changes' : 'Add Note'}
                   </Button>
                 </div>
-                <div className="mb-3">
+                <div className="mb-3 relative">
                   <Input 
                     placeholder="Search notes..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full"
+                    className="w-full pr-10"
                   />
+                  {isSearching && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="w-full justify-start mb-3 flex-wrap">
@@ -575,7 +626,7 @@ export default function Component() {
                   </TabsList>
                 </Tabs>
                 <ScrollArea className="flex-grow">
-                  {filteredNotes.map((note) => (
+                  {(globalSearchResults.length > 0 ? globalSearchResults : filteredNotes).map((note) => (
                     <div key={note.id} className="p-3 mb-3 rounded-lg shadow-sm bg-card">
                       <p className="mb-2 text-sm whitespace-pre-wrap">{note.content}</p>
                       <div className="flex gap-1 mb-2 flex-wrap">
@@ -587,9 +638,10 @@ export default function Component() {
                       </div>
                       <div className="flex justify-between items-center text-xs text-muted-foreground">
                         <span><Clock className="w-3 h-3 inline mr-1" />{new Date(note.createdAt).toLocaleString()}</span>
-                        <div>
-                          <Button onClick={() => editNote(note)} size="sm" variant="ghost" className="h-6 w-6 p-0">
-                            <Tag className="w-4 h-4" />
+                        <div className="flex items-center gap-2">
+                          <Button onClick={() => editNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -613,6 +665,11 @@ export default function Component() {
                           <Button onClick={() => toggleFavorite(note.id)} size="sm" variant="ghost" className="h-6 w-6 p-0">
                             <Star className={`w-4 h-4 ${note.isFavorite ? 'text-yellow-400 fill-yellow-400' : ''}`} />
                           </Button>
+                          {globalSearchResults.length > 0 && (
+                            <Button onClick={() => navigateToNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
+                              Go to Page {note.pageNumber}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
