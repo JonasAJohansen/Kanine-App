@@ -56,6 +56,7 @@ type Note = {
   content: string;
   tags: Tag[];
   createdAt: string;
+  updatedAt: string;
   isFavorite: boolean;
   bookId: number;
   pageNumber: number;
@@ -823,7 +824,8 @@ export default function KanineApp() {
                           ))}
                         </div>
                         <div className="flex flex-col gap-2 text-xs text-muted-foreground">
-                          <span><Clock className="w-3 h-3 inline mr-1" />{new Date(note.createdAt).toLocaleString()}</span>
+                          <span><Clock className="w-3 h-3 inline mr-1" />Created: {note.createdAt}</span>
+                          <span><Clock className="w-3 h-3 inline mr-1" />Updated: {note.updatedAt}</span>
                           <div className="flex items-center gap-2">
                             <Button onClick={() => editNote(note)} size="sm" variant="outline" className="h-6 px-2 py-1">
                               <Edit className="w-4 h-4 mr-1" />
