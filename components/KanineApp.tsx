@@ -122,7 +122,7 @@ export default function KanineApp() {
 
   const fetchBooks = async () => {
     try {
-      const response = await fetch('/api/books')
+      const response = await fetch('/api/books?includeCategory=true')
       if (response.ok) {
         const data = await response.json()
         setBooks(data)
@@ -529,7 +529,10 @@ export default function KanineApp() {
           </Button>
         </div>
         <div className="mb-4">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <Select 
+            value={selectedCategory} 
+            onValueChange={(value) => setSelectedCategory(value)}
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
@@ -646,7 +649,10 @@ export default function KanineApp() {
           </h2>
           <ScrollArea className="flex-grow">
             <div className="mb-4">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Select 
+                value={selectedCategory} 
+                onValueChange={(value) => setSelectedCategory(value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
