@@ -504,7 +504,7 @@ export default function KanineApp() {
 
   const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags.map(tag => tag.name))));
 
-  const AllBooksView = () => {
+  const AllBooksView = ({ selectedCategory, setSelectedCategory }) => {
     const [detailedBooks, setDetailedBooks] = useState<Book[]>([]);
 
     useEffect(() => {
@@ -750,7 +750,10 @@ export default function KanineApp() {
         </aside>
 
         {showAllBooks ? (
-          <AllBooksView />
+          <AllBooksView 
+            selectedCategory={selectedCategory} 
+            setSelectedCategory={setSelectedCategory}
+          />
         ) : selectedBook ? (
           <ResizablePanelGroup direction="horizontal" className="flex-grow">
             <ResizablePanel defaultSize={33} minSize={20}>
