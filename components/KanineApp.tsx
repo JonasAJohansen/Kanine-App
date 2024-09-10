@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, ChevronRight, Search, Tag, Clock, Star, Book, GraduationCap, Trash2, Moon, Sun, ChevronDown, ChevronUp, Upload, Edit, Loader2, FolderPlus } from 'lucide-react'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { Card } from "@/components/ui/card"
+import Image from 'next/image'
 
 type StarredPage = {
   id: number;
@@ -449,7 +450,7 @@ export default function KanineApp() {
     }
   };
 
-  const performGlobalSearch = async () => {
+  const performGlobalSearch = useCallback(async () => {
     if (selectedBook && searchTerm) {
       setIsSearching(true)
       try {
@@ -474,7 +475,7 @@ export default function KanineApp() {
     } else {
       setGlobalSearchResults([]);
     }
-  };
+  }, [selectedBook, searchTerm]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -485,7 +486,7 @@ export default function KanineApp() {
     } else {
       setGlobalSearchResults([]);
     }
-  }, [searchTerm, selectedBook]);
+  }, [searchTerm, performGlobalSearch]);
 
   const navigateToNote = (note: Note) => {
     setCurrentPage(note.pageNumber);
@@ -504,18 +505,23 @@ export default function KanineApp() {
 
   const uniqueTags = Array.from(new Set(filteredNotes.flatMap(note => note.tags.map(tag => tag.name))));
 
-  const AllBooksView = ({ selectedCategory, setSelectedCategory }) => {
+  interface AllBooksViewProps {
+    selectedCategory: string;
+    setSelectedCategory: (category: string) => void;
+  }
+
+  const AllBooksView: React.FC<AllBooksViewProps> = ({ selectedCategory, setSelectedCategory }) => {
     const [detailedBooks, setDetailedBooks] = useState<Book[]>([]);
 
     useEffect(() => {
       const fetchAllBookDetails = async () => {
         const bookDetailsPromises = books.map(book => fetchBookDetails(book.id));
         const bookDetails = await Promise.all(bookDetailsPromises);
-        setDetailedBooks(bookDetails.filter(book => book !== null) as Book[]);
+        setDetailedBooks(bookDetails.filter((book): book is Book => book !== null));
       };
 
       fetchAllBookDetails();
-    }, [books]);
+    }, []);
 
     const filteredBooks = selectedCategory === ALL_CATEGORIES
       ? detailedBooks
@@ -789,7 +795,7 @@ export default function KanineApp() {
                     ))}
                   </div>
                   <Button onClick={editingNote ? saveEditedNote : addNote} className="w-full">
-                    {editingNote ? 'Save Changes' : 'Add Note'}
+                    {editingNote ?  'Save Changes' : 'Add Note'}
                   </Button>
                 </div>
                 <div className="mb-3 relative">
@@ -946,9 +952,11 @@ export default function KanineApp() {
                       if (pageFile) {
                         if (pageFile.fileType.startsWith('image/')) {
                           return (
-                            <img 
+                            <Image 
                               src={pageFile.fileUrl || ''}
                               alt={`Page ${currentPage}`}
+                              width={800}
+                              height={600}
                               className="max-w-full max-h-full object-contain"
                             />
                           );
